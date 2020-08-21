@@ -12,9 +12,7 @@ import org.openqa.selenium.WebElement
 import org.openqa.selenium.interactions.Actions
 import org.openqa.selenium.remote.DesiredCapabilities
 import org.openqa.selenium.remote.RemoteWebDriver
-import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.Select
-import org.openqa.selenium.support.ui.WebDriverWait
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
@@ -49,7 +47,8 @@ class MainTest {
         val capabilities = DesiredCapabilities("chrome", "83.0.4103.61", Platform.LINUX)
         capabilities.setCapability("enableVNC", false)
         capabilities.setCapability("timeZone", "EU/Moscow")
-        driver = RemoteWebDriver(URL("http://localhost:4444/wd/hub"), capabilities)
+//        driver = wrapOperation { ChromeDriver() }
+        driver = wrapOperation { RemoteWebDriver(URL("http://localhost:4444/wd/hub"), capabilities) }
         log.info { "Driver created" }
     }
 
@@ -60,33 +59,27 @@ class MainTest {
         driver!!.quit()
     }
 
-
     @Test
     fun doCheck() {
         driver!!.get("http://lk.ucavtostart.ru/component/school/")
         log.info { "Start page opened" }
-        val loginInput = driver!!.findElement(By.id("modlgn_username"))
-        val passwdInput = driver!!.findElement(By.id("modlgn_passwd"))
-        val loginButton = driver!!.findElement(By.name("Submit"))
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(loginInput) }
-        loginInput.clear()
-        loginInput.sendKeys(System.getenv()["ZZ_USER_NAME"])
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(passwdInput) }
+        val loginInput = wrapOperation { driver!!.findElement(By.id("modlgn_username")) }
+        val passwdInput = wrapOperation { driver!!.findElement(By.id("modlgn_passwd")) }
+        val loginButton = wrapOperation { driver!!.findElement(By.name("Submit")) }
+        wrapOperation { loginInput.clear() }
+        wrapOperation { loginInput.sendKeys(System.getenv()["ZZ_USER_NAME"]) }
         log.info { "Login entered" }
-        passwdInput.clear()
-        passwdInput.sendKeys(System.getenv()["ZZ_USER_PASSWORD"])
+        wrapOperation { passwdInput.clear() }
+        wrapOperation { passwdInput.sendKeys(System.getenv()["ZZ_USER_PASSWORD"]) }
         log.info { "Pass entered" }
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(loginButton) }
-        loginButton.click()
+        wrapOperation { loginButton.click() }
         log.info { "Login button clicked" }
-        val timesheetLink = driver!!.findElement(By.xpath("//*[@id='ja-col1']//*[text()='Расписание занятий']"))
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(timesheetLink) }
-        timesheetLink.click()
+        val timesheetLink = wrapOperation { driver!!.findElement(By.xpath("//*[@id='ja-col1']//*[text()='Расписание занятий']")) }
+        wrapOperation { timesheetLink.click() }
         log.info { "Timesheet link clicked" }
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOfElementLocated(By.xpath("//*[@id='raspisanie_select']")) }
-        val periodSelector = Select(driver!!.findElement(By.xpath("//*[@id='raspisanie_select']")))
-        val periodOptions: List<WebElement> = driver!!.findElements(By.xpath("//*[@id='raspisanie_select']/option"))
-        val values = periodOptions.associateBy({ it.getAttribute("value") }, { it.text })
+        val periodSelector = wrapOperation { Select(driver!!.findElement(By.xpath("//*[@id='raspisanie_select']"))) }
+        val periodOptions: List<WebElement> = wrapOperation { driver!!.findElements(By.xpath("//*[@id='raspisanie_select']/option")) }
+        val values = wrapOperation { periodOptions.associateBy({ it.getAttribute("value") }, { it.text }) }
         val newValues = values.entries.filter { !currents.contains(it.value) }
         log.info { "Got entries:\n$values.\nNew entries: $newValues" }
         if (newValues.isEmpty()) {
@@ -97,7 +90,7 @@ class MainTest {
             log.warn { "Too much new values in ddl" }
             throw RuntimeException("Too much new values in ddl")
         }
-        periodSelector.selectByValue(newValues[0].key)
+        wrapOperation { periodSelector.selectByValue(newValues[0].key) }
         log.info { "New entry selected" }
         val successes: List<String> = listOf(
                 selectInTable(8, 6),
@@ -111,35 +104,51 @@ class MainTest {
     }
 
     private fun selectInTable(row: Int, column: Int): String {
-        TimeUnit.MILLISECONDS.sleep(500)
         log.info { "Looking for entry {row=$row column=$column}" }
-        val table = driver!!.findElement(By.xpath("//table"))
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(table) }
+        val table = wrapOperation { driver!!.findElement(By.xpath("//table")) }
         log.info { "Table is here" }
-        val tableRow = table.findElements(By.xpath(".//*[@class='users_polosa']"))[row - 1]
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(tableRow) }
+        val tableRow = wrapOperation { table.findElements(By.xpath(".//*[@class='users_polosa']"))[row - 1] }
         log.info { "Got row $row" }
-        val tableCell = tableRow.findElements(By.xpath(".//td"))[column - 1]
-        WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(tableCell) }
+        val tableCell = wrapOperation { tableRow.findElements(By.xpath(".//td"))[column - 1] }
         log.info { "Got column $column" }
-        if (tableCell.text.contains(System.getenv()["ZZ_USER_FIO"]!!)) {
+        if (wrapOperation { tableCell.text }.contains(System.getenv()["ZZ_USER_FIO"]!!)) {
             return System.getenv()["ZZ_USER_FIO"]!!
         }
         log.info { "Obtained cell" }
-        Actions(driver)
-                .moveToElement(tableCell)
-                .build()
-                .perform()
+        wrapOperation {
+            Actions(driver)
+                    .moveToElement(tableCell)
+                    .build()
+                    .perform()
+        }
         log.info { "Mouseover succeed" }
         try {
             log.info { "Try to find plus icon" }
-            val plusIcon = driver!!.findElement(By.xpath(".//*[contains(@class, 'edit') and contains(@class, 'iconki')]"))
-            WebDriverWait(driver, 10).until { ExpectedConditions.visibilityOf(plusIcon) }
-            plusIcon.click()
+            val plusIcon = wrapOperation { driver!!.findElement(By.xpath(".//*[contains(@class, 'edit') and contains(@class, 'iconki')]")) }
+            wrapOperation { plusIcon.click() }
             log.warn { "Plus icon clicked" }
         } catch (ignore: org.openqa.selenium.NoSuchElementException) {
         }
-        return tableCell.text
+        return wrapOperation { tableCell.text }
+    }
+
+    private fun <T> wrapOperation(supplier: () -> T): T {
+        val deadLine = System.nanoTime() + 10_000_000_000L
+        var result: T
+        var ett: Exception = RuntimeException()
+        var counter = 0
+        while (System.nanoTime() < deadLine) {
+            try {
+                counter++
+                result = supplier.invoke()
+                return result
+            } catch (e: Exception) {
+                ett = e
+            }
+            TimeUnit.MILLISECONDS.sleep(50)
+        }
+        log.warn { "Failed after $counter attempts. ${ett.localizedMessage}" }
+        throw RuntimeException("Failed after $counter attempts", ett)
     }
 
 }
