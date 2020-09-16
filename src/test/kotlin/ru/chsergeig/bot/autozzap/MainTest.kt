@@ -39,10 +39,12 @@ class MainTest {
             "17 Августа 2020-23 Августа 2020",
             "24 Августа 2020-30 Августа 2020",
             "31 Августа 2020-05 Сентября 2020",
-            "07 Сентября 2020-13 Сентября 2020"
+            "07 Сентября 2020-13 Сентября 2020",
+            "14 Сентября 2020-20 Сентября 2020",
+            "21 Сентября 2020-27 Сентября 2020"
     )
 
-    var driver: RemoteWebDriver? = null
+    private var driver: RemoteWebDriver? = null
 
     @BeforeAll
     fun initDriver() {
@@ -95,6 +97,7 @@ class MainTest {
         }
         wrapOperation { periodSelector.selectByValue(newValues[0].key) }
         log.info { "New entry selected" }
+
         val successes: List<String> = listOf(
                 selectInTable(8, 6),
                 selectInTable(9, 6),
@@ -104,6 +107,7 @@ class MainTest {
             log.warn { "Failed to queue" }
             throw RuntimeException("Failed to queue")
         }
+
     }
 
     private fun selectInTable(row: Int, column: Int): String {
@@ -130,7 +134,8 @@ class MainTest {
             val plusIcon = wrapOperation { driver!!.findElement(By.xpath(".//*[contains(@class, 'edit') and contains(@class, 'iconki')]")) }
             wrapOperation { plusIcon.click() }
             log.warn { "Plus icon clicked" }
-        } catch (ignore: org.openqa.selenium.NoSuchElementException) {
+        } catch (t: Throwable) {
+            log.error { t.message }
         }
         return wrapOperation { tableCell.text }
     }
