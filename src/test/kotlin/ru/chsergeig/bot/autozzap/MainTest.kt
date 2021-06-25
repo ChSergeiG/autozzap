@@ -86,7 +86,14 @@ class MainTest {
         val periodOptions: List<WebElement> = wrapOperation { driver!!.findElements(By.xpath("//*[@id='raspisanie_select']/option")) }
         val values = wrapOperation { periodOptions.associateBy({ it.getAttribute("value") }, { it.text }) }
         val newValues = values.entries.filter { !currents.contains(it.value) }
-        log.info { "Got entries:\n$values.\nNew entries: $newValues" }
+        log.info {
+            """
+            |Got entries:
+            |$values
+            |New entries:
+            |$newValues
+        """.trimMargin("|")
+        }
         if (newValues.isEmpty()) {
             log.warn { "No new values in ddl" }
             throw RuntimeException("No new values in ddl")

@@ -7,7 +7,7 @@ repositories {
 
 plugins {
     application
-    kotlin("jvm") version "1.3.72"
+    kotlin("jvm") version "1.5.20"
 }
 
 dependencies {
@@ -29,4 +29,6 @@ compileTestKotlin.kotlinOptions {
 
 tasks.test {
     useJUnitPlatform()
+    systemProperty("ZZ_USER_LOGIN", System.getProperty("ZZ_USER_LOGIN"))
+    systemProperty("ZZ_USER_PASSWORD", System.getProperty("ZZ_USER_PASSWORD"))
 }
